@@ -15,6 +15,7 @@
         private readonly string _apiKey = ConfigurationManager.AppSettings["ApiKey"];
         private readonly string _username = ConfigurationManager.AppSettings["Username"];
         private readonly string _container = ConfigurationManager.AppSettings["Container"];
+        private readonly string _containerUrl = ConfigurationManager.AppSettings["ContainerUrl"];
 
         private const string TestFile1 = "TestFile\\flower.jpg";
         private const string TestFile2 = "TestFile\\flower2.jpg";
@@ -165,6 +166,21 @@
         }
 
         [TestMethod]
+        public void GetUrlTest()
+        {
+            // Arrange
+            var fs = CreateFileSystem();
+            var path = "1010/flower.jpg";
+            EnsureTestFileAdded(fs, path);
+
+            // Act
+            var result = fs.GetUrl(path);
+
+            // Assert
+            Assert.AreEqual(_containerUrl + "/1010/flower.jpg", result);
+        }
+
+        [TestMethod]
         public void GetLastModifiedTest()
         {
             // Arrange
@@ -184,7 +200,7 @@
 
         private IFileSystem CreateFileSystem()
         {
-            return new CloudFilesFileSystem(_apiKey, _username, _container);
+            return new CloudFilesFileSystem(_apiKey, _username, _container, "https");
         }
 
         private static void EnsureTestFileAdded(IFileSystem fs, string path)
