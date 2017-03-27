@@ -7,6 +7,8 @@
     using net.openstack.Core.Domain;
     using net.openstack.Core.Exceptions.Response;
     using net.openstack.Providers.Rackspace;
+    using Umbraco.Core;
+    using Umbraco.Core.Cache;
     using Umbraco.Core.IO;
     using Umbraco.Core.Logging;
 
@@ -153,6 +155,23 @@
 
         public string GetRelativePath(string fullPathOrUrl)
         {
+            if (string.IsNullOrEmpty(fullPathOrUrl))
+            {
+                return string.Empty;
+            }
+
+            if (fullPathOrUrl.StartsWith(Delimiter))
+            {
+                fullPathOrUrl = fullPathOrUrl.Substring(1);
+            }
+
+            var provider = GetProvider();
+            var containerUrl = GetContainerUrl(provider);
+            if (fullPathOrUrl.StartsWith(containerUrl, StringComparison.InvariantCultureIgnoreCase))
+            {
+                fullPathOrUrl = fullPathOrUrl.Substring(containerUrl.Length);
+            }
+
             return fullPathOrUrl;
         }
 
@@ -195,14 +214,19 @@
 
         private string GetContainerUrl(CloudFilesProvider provider)
         {
-            var container = provider.GetContainerCDNHeader(_container);
-            var containerUrl = _urlProtocol.ToLowerInvariant() == "https" ? container.CDNSslUri : container.CDNUri;
-            if (containerUrl.EndsWith(Delimiter) == false)
-            {
-                containerUrl = containerUrl + Delimiter;
-            }
+            return ApplicationContext.Current.ApplicationCache.StaticCache
+                .GetCacheItem<string>("UmbracoFileSystemProviders.RackspaceCloudFiles.ContainerUrl",
+                    () =>
+                    {
+                        var container = provider.GetContainerCDNHeader(_container);
+                        var containerUrl = _urlProtocol.ToLowerInvariant() == "https" ? container.CDNSslUri : container.CDNUri;
+                        if (containerUrl.EndsWith(Delimiter) == false)
+                        {
+                            containerUrl = containerUrl + Delimiter;
+                        }
 
-            return containerUrl;
+                        return containerUrl;
+                    });
         }
 
         private string ResolvePath(CloudFilesProvider provider, string path)
